@@ -54,7 +54,7 @@ const paramId = ({
 } = {}) => id;
 
 const seconds = (t) => t * 1000;
-const minutes = (t) => t * 60;
+const minutes = (t) => t * seconds(60);
 const hours = (t) => t * minutes(60);
 
 const timeDiff = (timestamp, t) => timestamp + minutes(t);
