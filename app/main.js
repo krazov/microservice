@@ -52,7 +52,7 @@ app.post('/register', function register(request, response) {
     return response.json({
         message: `You have registered`,
         username: login,
-        password: '•••••••••••••••'
+        password: '•••••••••••••••',
     });
 });
 
