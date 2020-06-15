@@ -5,11 +5,13 @@ const { v4: uuid } = require('uuid');
 const {
     saveUser,
     fetchUser,
+} = require('./db/user');
+const {
     saveSession,
     fetchSession,
     cancelUserSessions,
     deleteSession,
-} = require('./db');
+} = require('./db/session');
 const { p } = require('./html');
 const {
     requestTime,

@@ -1,4 +1,3 @@
 module.exports = {
-    mongoUser: 'login',
-    mongoPass: 'password',
+    mongoUri: 'mongodb+srv://example.com',
 };
