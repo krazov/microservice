@@ -37,7 +37,7 @@ const {
     UnauthorizedError,
     ConflictError,
     UnprocessableEntityError,
-} = require('./errors');
+} = require('./utils/error.utils');
 
 const app = express();
 const port = 3000;
