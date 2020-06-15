@@ -41,10 +41,8 @@ const Session = mongoose.model('Session', {
     validUntil: Number,
 });
 
-function fetchUser(username, password) {
-    return password
-        ? User.findOne({ username, password })
-        : User.findOne({ username });
+function fetchUser(username) {
+    return User.findOne({ username });
 }
 
 function saveSession(token, username, validUntil) {
