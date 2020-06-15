@@ -2,6 +2,10 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { v4: uuid } = require('uuid');
 
+const {
+    saveUser,
+    fetchUser,
+} = require('./db');
 const { p } = require('./html');
 const {
     requestTime,
@@ -11,7 +15,8 @@ const {
     bodyNote,
     paramId,
     timeDiff,
-} = require('./utils');
+} = require('./utils/utils');
+const { hashedPassword } = require('./utils/hash.utils');
 const {
     UnauthorizedError,
     ConflictError,
@@ -38,10 +43,10 @@ app.post('/', function (request, response) {
     });
 });
 
-app.post('/register', function register(request, response) {
+app.post('/register', async function register(request, response) {
     const { login, password, passwordRepeated } = userRequestData(request, { isRegistration: true });
 
-    const isExistingUser = users[login];
+    const isExistingUser = (await fetchUser(login)).length > 0;
     if (isExistingUser) {
         return ConflictError(response, { message: `User already exists` });
     }
@@ -51,11 +56,8 @@ app.post('/register', function register(request, response) {
         return UnprocessableEntityError(response, { message: 'Mismatched or empty password' })
     }
 
-    users[login] = {
-        // TODO: hash it or something, maybe even salt it
-        password,
-        notes: {},
-    };
+    const safePassword = await hashedPassword(password);
+    await saveUser(login, safePassword);
 
     return response.json({
         message: `You have registered`,
