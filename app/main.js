@@ -5,6 +5,10 @@ const { v4: uuid } = require('uuid');
 const {
     saveUser,
     fetchUser,
+    saveSession,
+    fetchSession,
+    cancelUserSessions,
+    deleteSession,
 } = require('./db');
 const { p } = require('./html');
 const {
@@ -16,7 +20,10 @@ const {
     paramId,
     timeDiff,
 } = require('./utils/utils');
-const { hashedPassword } = require('./utils/hash.utils');
+const {
+    hashedPassword,
+    isMatchingPassword,
+} = require('./utils/hash.utils');
 const {
     UnauthorizedError,
     ConflictError,
@@ -66,19 +73,21 @@ app.post('/register', async function register(request, response) {
     });
 });
 
-app.post('/login', function login(request, response) {
+app.post('/login', async function login(request, response) {
     const { login, password } = userRequestData(request);
 
-    const isWrongLoginOrPassword = !users[login] || users[login].password != password;
-    if (isWrongLoginOrPassword) return response.send(`Error: Wrong username or password.`);
+    const user = await fetchUser(login);
+    const isWrongLoginOrPassword = !user || !(await isMatchingPassword(password, user.password));
+    if (isWrongLoginOrPassword) {
+        return UnprocessableEntityError(response, { message: 'Wrong username or password' });
+    }
+
+    await cancelUserSessions(login);
 
     const sessionToken = uuid();
-    const validUntil = timeDiff(request.requestTime + 5);
+    const validUntil = timeDiff(request.requestTime, 5);
 
-    sessions[sessionToken] = {
-        username: login,
-        validUntil,
-    };
+    await saveSession(sessionToken, login, validUntil);
 
     return response.json({
         message: `You have logged in`,
@@ -86,11 +95,13 @@ app.post('/login', function login(request, response) {
     });
 });
 
-app.get('/logout', function logout(request, response) {
+app.get('/logout', async function logout(request, response) {
     const token = sessionToken(request);
 
-    const isLoggedInUser = sessions[token];
-    if (isLoggedInUser) delete sessions[token];
+    const isLoggedInUser = await fetchSession(token);
+    if (isLoggedInUser) {
+        await deleteSession(token);
+    }
 
     return response.json({
         message: 'User has been logged out',
