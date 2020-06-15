@@ -8,14 +8,17 @@ function requestLogger(request, response, next) {
     console.log('Headers:');
     console.log(JSON.stringify(headers));
     if (Object.keys(params).length) {
+        console.log('-');
         console.log('Params:');
         console.log(JSON.stringify(params));
     }
     if (Object.keys(query).length) {
+        console.log('-');
         console.log('Query:');
         console.log(JSON.stringify(query));
     }
     if (Object.keys(body).length) {
+        console.log('-');
         console.log('Body:');
         console.log(JSON.stringify(body));
     }

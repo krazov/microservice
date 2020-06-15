@@ -2,8 +2,9 @@
   "name": "microservice",
   "version": "0.0.1",
   "description": "Yet another bump on my learning curve",
-  "main": "main.js",
+  "main": "app/main.js",
   "scripts": {
+    "app": "node app/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
