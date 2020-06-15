@@ -12,7 +12,11 @@ const {
     paramId,
     timeDiff,
 } = require('./utils');
-const { UnauthorizedError } = require('./errors');
+const {
+    UnauthorizedError,
+    ConflictError,
+    UnprocessableEntityError,
+} = require('./errors');
 
 const app = express();
 const port = 3000;
@@ -38,10 +42,14 @@ app.post('/register', function register(request, response) {
     const { login, password, passwordRepeated } = userRequestData(request, { isRegistration: true });
 
     const isExistingUser = users[login];
-    if (isExistingUser) return response.send(`User ${login} already exists.`);
+    if (isExistingUser) {
+        return ConflictError(response, { message: `User already exists` });
+    }
 
     const isEmptyOrMismatchedPassword = password === undefined || password != passwordRepeated;
-    if (isEmptyOrMismatchedPassword) return response.send(`Error: Incorrect password.`);
+    if (isEmptyOrMismatchedPassword) {
+        return UnprocessableEntityError(response, { message: 'Mismatched or empty password' })
+    }
 
     users[login] = {
         // TODO: hash it or something, maybe even salt it
@@ -52,7 +60,7 @@ app.post('/register', function register(request, response) {
     return response.json({
         message: `You have registered`,
         username: login,
-        password: '•••••••••••••••',
+        password: '•'.repeat(password.length),
     });
 });
 
@@ -99,6 +107,7 @@ app.get('/notes', function getNotes(request, response) {
     return response.send(JSON.stringify(Object.values(notes)));
 });
 
+// TODO: idempotency
 app.post('/note', function postNote(request, response) {
     const token = sessionToken(request);
     const session = sessions[token];
