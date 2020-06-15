@@ -12,7 +12,14 @@ const {
     cancelUserSessions,
     deleteSession,
 } = require('./db/session');
-const { p } = require('./html');
+const {
+    fetchNotes,
+    addNote,
+    fetchNote,
+    updateNote,
+    deleteNote,
+} = require('./db/notes');
+const { p } = require('./utils/html.utils');
 const {
     requestTime,
     requestLogger,
@@ -110,35 +117,34 @@ app.get('/logout', async function logout(request, response) {
     });
 });
 
-app.get('/notes', function getNotes(request, response) {
+app.get('/notes', async function getNotes(request, response) {
     const token = sessionToken(request);
+    const user = await fetchSession(token);
+    const isLoggedOutUser = user === null;
 
-    const session = sessions[token];
-    const isLoggedOutUser = session === undefined;
-    if (isLoggedOutUser) return UnauthorizedError(response);
+    if (isLoggedOutUser) {
+        return UnauthorizedError(response);
+    }
 
-    const notes = users[session.username].notes;
-
-    return response.send(JSON.stringify(Object.values(notes)));
+    return response.json(await fetchNotes(user.username));
 });
 
 // TODO: idempotency
-app.post('/note', function postNote(request, response) {
+app.post('/note', async function postNote(request, response) {
     const token = sessionToken(request);
-    const session = sessions[token];
-    const isLoggedOutUser = session === undefined;
+    const session = await fetchSession(token);
+    const isLoggedOutUser = session === null;
 
-    if (isLoggedOutUser) return UnauthorizedError(response);
+    if (isLoggedOutUser) {
+        return UnauthorizedError(response);
+    }
+
+    const user = await fetchUser(session.username);
 
     const id = uuid();
     const note = bodyNote(request);
 
-    users[session.username].notes[id] = {
-        id,
-        created: request.requestTime,
-        modified: [],
-        note,
-    };
+    await addNote(id, user.username, request.requestTime, note);
 
     return response.json({
         message: `Note has been added`,
@@ -147,48 +153,54 @@ app.post('/note', function postNote(request, response) {
     });
 });
 
-app.get('/note/:id', function getNote(request, response) {
+app.get('/note/:id', async function getNote(request, response) {
     const token = sessionToken(request);
-    const session = sessions[token];
-    const isLoggedOutUser = session === undefined;
+    const session = await fetchSession(token);
+    const isLoggedOutUser = session === null;
 
-    if (isLoggedOutUser) return UnauthorizedError(response);
+    if (isLoggedOutUser) {
+        return UnauthorizedError(response);
+    }
 
     const id = paramId(request);
-    const note = users[session.username].notes[id];
 
-    return response.json(note);
+    return response.json(await fetchNote(id));
 });
 
-app.put('/note/:id', function putNote(request, response) {
+// TODO: do not allow any user to perform an operation on any note ;)
+app.put('/note/:id', async function putNote(request, response) {
     const token = sessionToken(request);
-    const session = sessions[token];
-    const isLoggedOutUser = session === undefined;
+    const session = await fetchSession(token);
+    const isLoggedOutUser = session === null;
 
-    if (isLoggedOutUser) return UnauthorizedError(response);
+    if (isLoggedOutUser) {
+        return UnauthorizedError(response);
+    }
 
     const id = paramId(request);
-    const item = users[session.username].notes[id];
+    const note = bodyNote(request);
 
-    item.note = bodyNote(request);
-    item.modified.push(Date.now());
+    await updateNote(id, Date.now(), note);
 
     return response.json({
         message: `Note has been updated`,
         id,
-        note: item.note,
+        note,
     });
 });
 
-app.delete('/note/:id', function deleteNotes(request, response) {
+// TODO: do not allow any user to perform an operation on any note ;)
+app.delete('/note/:id', async function deleteNotes(request, response) {
     const token = sessionToken(request);
-    const session = sessions[token];
-    const isLoggedOutUser = session === undefined;
+    const session = await fetchSession(token);
+    const isLoggedOutUser = session === null;
 
-    if (isLoggedOutUser) return UnauthorizedError(response);
+    if (isLoggedOutUser) {
+        return UnauthorizedError(response);
+    }
 
     const id = paramId(request);
-    delete users[session.username].notes[id];
+    await deleteNote(id);
 
     return response.json({
         message: `Note has been deleted`,
